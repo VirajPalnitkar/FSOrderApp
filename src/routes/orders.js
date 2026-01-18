@@ -42,4 +42,67 @@ router.get('/:id',async(req,res)=>{
     return res.json(order);
 })
 
+router.put("/:id",async(req,res)=>{
+    const {userId,currency,status,amount}=req.body;
+    if(!currency || !userId || amount===undefined || typeof amount!=='number' || amount<=0){
+        return res.status(400).json({
+            error:"Information insufficient"
+        })
+    }
+    try{
+        const order=await Order.findById(req.params.id);
+        if(!order)
+            return res.status(404).json({error:"Order not found"});
+        order.userId=userId;
+        order.amount=amount;
+        order.currency=currency;
+        if(status)
+            order.status=status;
+        
+            await order.save();
+            return res.status(200).json(order);
+    }
+    catch(e){
+        return res.status(500).json({error:"Server Error"});
+    }
+})
 
+router.patch("/:id",async(req,res)=>{
+    try{
+        const allowed=["amount","currency","status"];
+        const updates={};
+        for(const key of allowed){
+            if(req.body[key]!==undefined)
+                updates[key]=req.body[key];
+        }
+        //by default, the old doc is returned
+        //by using new:true, the updated doc is returned
+        const order=await Order.findByIdAndUpdate(req.params.id,
+            updates,{
+                new:true,
+                //Explicit mention needed for update version
+                //Dont use findByIdAndUpdate when hooks are involved
+                runValidators:true
+            }
+        );
+        if (!order) 
+            return res.status(404).json({ error: "Not found" }); 
+        return res.json(order);
+    }
+    catch(e){
+        res.status(500).json({ error: "Server error" });
+    }
+})
+
+router.delete("/:id", async (req, res) => { 
+  try { 
+    const order = await Order.findByIdAndDelete(req.params.id); 
+    //It returns the deleted document if it exists
+    if (!order) return res.status(404).json({ error: "Not found" }); 
+    res.json({ message: "Deleted" }); 
+  } catch (err) { 
+    res.status(500).json({ error: "Server error" }); 
+  } 
+}); 
+
+module.exports=router;
