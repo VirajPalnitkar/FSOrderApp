@@ -7,7 +7,7 @@ router.get("/payment-behaviour",(req,res)=>{
     res.json(getBehaviour());
 })
 
-router.post("/payment-behavior",(req,res)=>{
+router.post("/payment-behaviour",(req,res)=>{
     setBehaviour(req.body||{});
     res.json(getBehaviour());
 })

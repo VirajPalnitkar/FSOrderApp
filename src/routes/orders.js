@@ -1,5 +1,6 @@
 const express=require('express');
 const Order=require('../models/Order')
+const {charge}=require('../services/paymentProvider')
 
 const OrderStatus={
     PAID:"Paid",
@@ -42,6 +43,7 @@ router.get('/:id',async(req,res)=>{
     return res.json(order);
 })
 
+//inner doc (payment) not changing
 router.put("/:id",async(req,res)=>{
     const {userId,currency,status,amount}=req.body;
     if(!currency || !userId || amount===undefined || typeof amount!=='number' || amount<=0){
@@ -58,7 +60,6 @@ router.put("/:id",async(req,res)=>{
         order.currency=currency;
         if(status)
             order.status=status;
-        
             await order.save();
             return res.status(200).json(order);
     }
@@ -67,6 +68,7 @@ router.put("/:id",async(req,res)=>{
     }
 })
 
+//inner doc still not changing
 router.patch("/:id",async(req,res)=>{
     try{
         const allowed=["amount","currency","status"];
@@ -90,6 +92,7 @@ router.patch("/:id",async(req,res)=>{
         return res.json(order);
     }
     catch(e){
+        console.log(e.message)
         res.status(500).json({ error: "Server error" });
     }
 })
