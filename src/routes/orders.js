@@ -1,6 +1,7 @@
 const express=require('express');
 const Order=require('../models/Order')
 const {charge}=require('../services/paymentProvider')
+const idempotency=require('../midlleware/idempotency')
 
 const OrderStatus={
     PAID:"Paid",
@@ -8,7 +9,7 @@ const OrderStatus={
 }
 
 const router=express.Router();
-router.post('/',async(req,res,next)=>{
+router.post('/',idempotency(),async(req,res,next)=>{
     try{
         const {userId,amount,currency}=req.body;
         if(!userId || !amount || !currency || typeof amount!=='number' || amount<0)
