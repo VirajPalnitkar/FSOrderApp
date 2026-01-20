@@ -2,6 +2,7 @@ const express=require('express');
 const Order=require('../models/Order')
 const {charge}=require('../services/paymentProvider')
 const idempotency=require('../midlleware/idempotency')
+const generateETag=require('../utils/etag')
 
 const OrderStatus={
     PAID:"Paid",
@@ -41,6 +42,14 @@ router.get('/',async(req,res)=>{
 router.get('/:id',async(req,res)=>{
     const order=await Order.findById(req.params.id);
     if(!order) return res.status(404).json({error:"Not Found"});
+    const etag=generateETag(order);
+    //set method used to set http headers
+    res.set("ETag",etag);
+    //no-cache meaning  You may cache this response, but you MUST revalidate before using it
+    res.set("Cache-Control","no-cache");
+    const clientETag=req.headers["if-none-match"];
+    if(clientETag===etag)
+        return res.status(304).end();
     return res.json(order);
 })
 
