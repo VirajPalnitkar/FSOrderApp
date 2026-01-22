@@ -3,13 +3,18 @@ const Order=require('../models/Order')
 const {charge}=require('../services/paymentProvider')
 const idempotency=require('../midlleware/idempotency')
 const generateETag=require('../utils/etag')
+const BulkHead=require('../utils/bulkhead')
 
 const OrderStatus={
     PAID:"Paid",
     PAYMENT_FAILED:"Payment_Failed"
 }
 
+
+
+const paymentBulkHead=new BulkHead(4); 
 const router=express.Router();
+
 router.post('/',idempotency(),async(req,res,next)=>{
     try{
         const {userId,amount,currency}=req.body;
@@ -17,16 +22,22 @@ router.post('/',idempotency(),async(req,res,next)=>{
             return res.status(400).json({error:"Invalid Input"});
         const order=await Order.create({userId,amount,currency});
         try{
-            const payment=await charge({orderId:order._id,amount,currency});
+            const payment=await paymentBulkHead.execute(()=>charge({orderId:order._id,amount,currency}));
             order.status=OrderStatus.PAID;
             order.payment=payment;
             await order.save();
             return res.status(201).json(order);
         }
         catch(e){
+            console.log(e.message)
             order.status=OrderStatus.PAYMENT_FAILED;
             await order.save();
-            return res.status(502).json({error:"Payment failed"});
+            if(e.statusCode===502)
+                return res.status(502).json({error:"Payment failed"});
+            else if(e.statusCode===429)
+                return res.status(429).json({ message: "Too many concurrent requests. Please retry later."}); 
+            else
+                return res.status(400).json({message:"Aiyya"})
         }
     }
     catch(e){
