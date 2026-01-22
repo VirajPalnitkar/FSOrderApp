@@ -34,6 +34,35 @@ router.post('/',idempotency(),async(req,res,next)=>{
     }
 })
 
+router.get("/offset",async(req,res)=>{
+    const page=parseInt(req.query.page || "1");
+    const limit=parseInt(req.query.limit || "10");
+    const skip=(page-1)*limit;
+    const orders=await Order.find().sort({createdAt:-1}).skip(skip).limit(limit);
+    const total=await Order.countDocuments();
+    res.json({
+        paginationType:"offset",
+        page,
+        limit,
+        total,
+        data:orders
+    });
+});
+
+router.get("/cursor",async(req,res)=>{
+    limit=parseInt(req.query.limit || "10");
+    const cursor=req.query.cursor;
+    const query=cursor?{createdAt:{$lt:new Date(cursor)}}:{};
+    const orders=await Order.find(query).sort({createdAt:-1}).limit(limit)
+    const nextCursor=orders.length>0?orders[orders.length-1].createdAt:null;
+    res.json({
+        paginationType:"cursor",
+        limit,
+        nextCursor,
+        data:orders
+    })
+})
+
 router.get('/',async(req,res)=>{
     const orders=await Order.find({});
     return res.status(200).json({orders});
