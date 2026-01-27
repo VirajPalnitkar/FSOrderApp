@@ -9,9 +9,9 @@ async function charge({orderId,amount,currency}){
     //delay between min and max , both being inclusive
     const delay = Math.floor(Math.random() * (state.maxDelayMs - state.minDelayMs + 1)) + state.minDelayMs; 
     await sleep(3000);
-    // if(Math.random()<state.failureRate){
-    //     throw new PaymentFailError();
-    // }
+    //if(Math.random()<state.failureRate){
+        throw new PaymentFailError();
+    //}
     return {
         provider:"Mock_Pay",
         paymentId:`pay_${orderId}_${Date.now()}`,

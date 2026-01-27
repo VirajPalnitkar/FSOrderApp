@@ -4,6 +4,7 @@ const {charge}=require('../services/paymentProvider')
 const idempotency=require('../midlleware/idempotency')
 const generateETag=require('../utils/etag')
 const BulkHead=require('../utils/bulkhead')
+const CircuitBreaker=require("../utils/circuitBreaker")
 
 const OrderStatus={
     PAID:"Paid",
@@ -11,7 +12,10 @@ const OrderStatus={
 }
 
 
-
+const paymentBreaker=new CircuitBreaker({ 
+  failureThreshold: 4, 
+  resetTimeout: 10000 
+});
 const paymentBulkHead=new BulkHead(4); 
 const router=express.Router();
 
@@ -22,7 +26,7 @@ router.post('/',idempotency(),async(req,res,next)=>{
             return res.status(400).json({error:"Invalid Input"});
         const order=await Order.create({userId,amount,currency});
         try{
-            const payment=await paymentBulkHead.execute(()=>charge({orderId:order._id,amount,currency}));
+            const payment=await paymentBreaker.execute(async()=>paymentBulkHead.execute(()=>charge({orderId:order._id,amount,currency})));
             order.status=OrderStatus.PAID;
             order.payment=payment;
             await order.save();
@@ -34,6 +38,8 @@ router.post('/',idempotency(),async(req,res,next)=>{
             await order.save();
             if(e.statusCode===502)
                 return res.status(502).json({error:"Payment failed"});
+            else if(e.statusCode===503)
+                return res.status(503).json({ message: "Circuit breaker open"});
             else if(e.statusCode===429)
                 return res.status(429).json({ message: "Too many concurrent requests. Please retry later."}); 
             else

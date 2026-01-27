@@ -11,6 +11,9 @@ class BulkHead{
         try{
             return await task();
         }
+        catch(e){
+            throw e;
+        }
         finally{
             this.active--;
         }

@@ -14,4 +14,13 @@ class PaymentFailError extends Error{
     }
 }
 
-module.exports={BulkHeadError,PaymentFailError};
+class CircuitBreakerOpenError extends Error {
+  constructor() {
+    super("Service temporarily unavailable");
+    this.name = "CircuitBreakerOpenError";
+    this.statusCode = 503;
+  }
+}
+
+
+module.exports={BulkHeadError,PaymentFailError,CircuitBreakerOpenError};
